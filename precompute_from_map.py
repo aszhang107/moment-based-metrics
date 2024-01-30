@@ -8,7 +8,7 @@ import pyshtools as pysh
 import scipy.sparse
 from utils import compute_moments_from_map
 
-emd_id_list = ['20847', '0093', '23128', '27648', '24974', '24822', '13234', '11657']
+vol_id_list = ['000', '001', '002', '003', '004's]
 
 l_cap = 25 #L - bandlimit parameter
 N = 64 #grid size
@@ -16,7 +16,7 @@ p_cap = 6 #P - bandlimit parameter
 voxel_size = 1.3 * 4 #voxel size in angstroms
 phi_grid_size = N #grid of angles
 Nsph = 300 #bandlimit for spherical harmonics expansion
-save_path = '/scratch/gpfs/az8940' #where to save to
+save_path = '/scratch/gpfs/az8940/empiar10076-analysis/' #where to save to
 num_workers = 16 #workers for parallel processing
 
 r_image = np.fft.fftfreq(N, voxel_size)[N//2 - 1]
@@ -63,9 +63,23 @@ def generate_B_matrices(l_cap):
                 B_mat_dict['n={},l1={},l2={}'.format(n, l1, l2)] = scipy.sparse.csr_matrix(scriptB_LS(l1, l2, n))
     return B_mat_dict
 
-def precompute_step(emd_id):
+def precompute_step(vol_id):
     t1 = time.time()
-    m1, m2, A = get_moments_from_map('emd_{}_voxel_adjusted.mrc'.format(emd_id))
+    vol = np.array(Volume.load('EMPIAR10076_data/{}.mrc'.format(vol_id)).asnumpy()[0]) # replace this with the location of the mrc files
+
+    # Apply circular mask of radius = N//2 to volume to match up with covariance estimation code
+    xm = (N + 1) //2
+    ym = (N + 1) //2
+    zm = (N + 1) //2
+
+    for x in range(N):
+        for y in range(N):
+            for z in range(N):
+                if (x - xm)**2 + (y - ym)**2 + (z - zm)**2 >= N**2//4:
+                    vol[x, y, z] = 0
+
+    m1, m2, A = get_moments_from_map(vol)
+
     t2 = time.time()
     print('Coefficients generated, time = {}'.format(t2 - t1))
     A_list = []
@@ -96,18 +110,13 @@ def precompute_step(emd_id):
     print('QR factorization done, time = {}'.format(time.time() - t4))
     #Save the unweighted LS matrix
     '''
-    with open('{}/unweighted_ls_matrices_from_map/{}.pickle'.format(save_path, emd_id), 'wb') as handle:
+    with open('{}/unweighted_ls_matrices_from_map/{}.pickle'.format(save_path, vol_id), 'wb') as handle:
         pickle.dump(LS_matrix, handle, protocol=pickle.HIGHEST_PROTOCOL)
     '''
-    LS_matrix[:N//2] = (LS_matrix[:N//2].T * np.sqrt(c_grid)).T
-    LS_matrix[N//2:] = (LS_matrix[N//2:].T.reshape(-1, N, N//2, N//2) * (np.expand_dims(np.sqrt(c_grid), 1) @ np.expand_dims(np.sqrt(c_grid), 0))).reshape(-1, N * N//2 * N//2).T
-    LS_matrix = LS_matrix[~np.all(LS_matrix == 0, axis=1)]
     
-    #Save the LS matrix and its (even-indices) QR factorization and its first and second moment
+    #Save the first and second moment
     '''
-    with open('{}/ls_matrices_from_map/{}.pickle'.format(save_path, emd_id), 'wb') as handle:
-        pickle.dump(LS_matrix, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    with open('{}/uniform_moments_from_map/{}.pickle'.format(save_path, emd_id), 'wb') as handle:
+    with open('{}/uniform_moments_from_map/{}.pickle'.format(save_path, vol_id), 'wb') as handle:
         pickle.dump((mol.M1, mol.M2), handle, protocol=pickle.HIGHEST_PROTOCOL)
     '''
     
@@ -117,6 +126,6 @@ B_ls_matrices = generate_B_matrices(l_cap)
 starttime = time.time()
 
 with multiprocessing.Pool(num_workers) as pool:
-    pdb_moments = pool.map(precompute_step, emd_id_list)
+    pdb_moments = pool.map(precompute_step, vol_id_list)
 
 print('Runtime: {} minutes'.format((time.time() - starttime)/60))
