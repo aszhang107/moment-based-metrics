@@ -9,12 +9,14 @@ import pyshtools as pysh
 from scipy.special import sph_harm
 from aspire.volume import Volume
 from aspire.utils.coor_trans import grid_3d, grid_2d
-from fle_2d_single import FLEBasis2D
-from fast_cryo_pca import FastPCA 
-import utils_cwf_fast_batch as utils
 import finufft
 from scipy.linalg import solve_triangular
 from aspire.source.relion import RelionSource
+import sys
+sys.path.insert(0, './utils')
+from fle_2d_single import FLEBasis2D
+from fast_cryo_pca import FastPCA 
+import utils_cwf_fast_batch as utils
 
 vol_id_list = ['000', '001', '002', '003', '004']
 
@@ -24,7 +26,7 @@ p_cap = 6 #P - bandlimit parameter
 voxel_size = 1.3 * 4 #voxel size in angstroms
 phi_grid_size = N #grid of angles
 Nsph = 300 #bandlimit for spherical harmonics expansion
-save_path = '/scratch/gpfs/az8940/empiar10076-analysis/' #where to save to
+save_path = '/scratch/gpfs/az8940/empiar10076-analysis' #where to save to
 num_workers = 16 #workers for parallel processing
 
 r_image = np.fft.fftfreq(N, voxel_size)[N//2 - 1]
@@ -41,11 +43,11 @@ for l_prime in range(0, p_cap + 1):
         index_dict[(l_prime, m)] = i
         m_list.append((l_prime, m))
         i += 1
+N_ = np.array(loadmat('utils/N_matrix.mat')['data'])
 
 def get_experimental_data_weighted(vol_id):
-    logger = logging.getLogger(__name__)
     # Set input path and files and initialize other parameters
-    DATA_FOLDER = 'EMPIAR10076_data'
+    DATA_FOLDER = '/scratch/gpfs/az8940/EMPIAR10076' #'EMPIAR10076_data'
     STARFILE_IN = 'EMPIAR10076_data/Parameters-major-{}.star'.format(vol_id)
 
     MAX_ROWS = None
@@ -69,7 +71,7 @@ def get_experimental_data_weighted(vol_id):
     if MAX_RESOLUTION < source.L:
         source = source.downsample(MAX_RESOLUTION)
 
-    shifts = -poses[1][key_dict[vol_id]] * N
+    shifts = pickle.load(open('EMPIAR10076_data/shifts-{}.pkl'.format(vol_id), 'rb'))
     fle = FLEBasis2D(MAX_RESOLUTION, MAX_RESOLUTION, eps=eps, dtype=dtype)
 
     options = {
@@ -138,15 +140,15 @@ def get_experimental_data_weighted(vol_id):
     experimental_data_weighted = experimental_data_weighted[experimental_data_weighted != 0]
     #with open('{}/experimental_datas_major_{}'.format(save_path, vol_id), 'wb') as f:
     #    pickle.dump((experimental_data, experimental_data_weighted), f)
-    return experimental_data_weighted, experimental_data #m2_uncentered
+    return experimental_data_weighted, experimental_data 
 
 #Retrieve LS matrices if they are stored
 def obtain_LS_matrix(vol_id):
-    with open('{}/ls_matrices_from_map/{}.pickle'.format(save_path, vol_id), 'rb') as handle:
+    with open('{}/ls_matrices_from_map/{}.pkl'.format(save_path, vol_id), 'rb') as handle:
         return pickle.load(handle)
 
 def obtain_unweighted_LS_matrix(vol_id):
-    with open('{}/unweighted_ls_matrices_from_map/{}.pickle'.format(save_path, vol_id), 'rb') as handle:
+    with open('{}/unweighted_ls_matrices_from_map/{}.pkl'.format(save_path, vol_id), 'rb') as handle:
         return pickle.load(handle)
     
 def metric_weighted(vol_id):
@@ -174,9 +176,11 @@ def metric_weighted(vol_id):
     return (vol_id, np.linalg.norm(LS_matrix @ B_hat - experimental_data_weighted)**2)
 
 #Rank database structures
+experimental_data_weighted, experimental_data = get_experimental_data_weighted('001') # Change the string here for different set of images
 starttime = time.time()
 
 with multiprocessing.Pool(num_workers) as pool:
-    distances_m2 = pool.map(metricWeighted, vol_id_list)
+    distances_m2 = pool.map(metric_weighted, vol_id_list)
 print('Runtime: {} minutes'.format((time.time() - starttime)/60))
 distances_m2_sorted = sorted(distances_m2, key=lambda tup: tup[1])
+print(distances_m2_sorted)

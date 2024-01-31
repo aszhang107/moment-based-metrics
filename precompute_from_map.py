@@ -6,9 +6,12 @@ import numpy as np
 from scipy.io import loadmat
 import pyshtools as pysh
 import scipy.sparse
-from utils import compute_moments_from_map
+import sys
+from aspire.volume import Volume
+sys.path.insert(0, './utils')
+from moment_utils import compute_moments_from_map
 
-vol_id_list = ['000', '001', '002', '003', '004's]
+vol_id_list = ['000', '001', '002', '003', '004']
 
 l_cap = 25 #L - bandlimit parameter
 N = 64 #grid size
@@ -16,7 +19,7 @@ p_cap = 6 #P - bandlimit parameter
 voxel_size = 1.3 * 4 #voxel size in angstroms
 phi_grid_size = N #grid of angles
 Nsph = 300 #bandlimit for spherical harmonics expansion
-save_path = '/scratch/gpfs/az8940/empiar10076-analysis/' #where to save to
+save_path = '/scratch/gpfs/az8940/empiar10076-analysis' #where to save to
 num_workers = 16 #workers for parallel processing
 
 r_image = np.fft.fftfreq(N, voxel_size)[N//2 - 1]
@@ -24,8 +27,8 @@ c_grid = np.linspace(0, r_image, N//2, endpoint=True)
 phi_grid = np.linspace(0, 2*np.pi, phi_grid_size, endpoint=False)
 r_size = len(c_grid)
 
-CG_matrix = loadmat('clebsch-gordan.mat')['data']
-N_ = np.array(loadmat('N_matrix.mat')['data'])
+CG_matrix = loadmat('utils/clebsch-gordan.mat')['data']
+N_ = np.array(loadmat('utils/N_matrix.mat')['data'])
 
 def get_moments_from_map(file):
     M1, M2, As = compute_moments_from_map(file, Nsph, phi_grid, c_grid, voxel_size, N, r_image)
@@ -109,14 +112,12 @@ def precompute_step(vol_id):
     print('Moment generation done, time = {}'.format(t4 - t3))
     print('QR factorization done, time = {}'.format(time.time() - t4))
     #Save the unweighted LS matrix
-    '''
-    with open('{}/unweighted_ls_matrices_from_map/{}.pickle'.format(save_path, vol_id), 'wb') as handle:
+    with open('{}/unweighted_ls_matrices_from_map/{}.pkl'.format(save_path, vol_id), 'wb') as handle:
         pickle.dump(LS_matrix, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    '''
     
     #Save the first and second moment
     '''
-    with open('{}/uniform_moments_from_map/{}.pickle'.format(save_path, vol_id), 'wb') as handle:
+    with open('{}/uniform_moments_from_map/{}.pkl'.format(save_path, vol_id), 'wb') as handle:
         pickle.dump((mol.M1, mol.M2), handle, protocol=pickle.HIGHEST_PROTOCOL)
     '''
     

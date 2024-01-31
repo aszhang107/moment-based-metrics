@@ -6,8 +6,10 @@ import pyshtools as pysh
 import prody
 import scipy.sparse
 from scipy.io import loadmat
+import sys
+sys.path.insert(0, './utils')
 from generate_synthetic_molecule import generate_potential_at_freqs_from_atoms, center_atoms
-from utils import compute_moments, read_pdb_ids_from_csv, Molecule
+from moment_utils import compute_moments, read_pdb_ids_from_csv, Molecule
 
 pdb_file = 'pdb_id_list.txt' #file containing pdb ids
 pdb_id_list = read_pdb_ids_from_csv(pdb_file) 
@@ -27,8 +29,8 @@ c_grid = np.linspace(0, r_image, N//2, endpoint=True)
 phi_grid = np.linspace(0, 2*np.pi, phi_grid_size, endpoint=False)
 r_size = len(c_grid)
 
-CG_matrix = loadmat('clebsch-gordan.mat')['data']
-N_ = np.array(loadmat('N_matrix.mat')['data'])
+CG_matrix = loadmat('utils/clebsch-gordan.mat')['data']
+N_ = np.array(loadmat('utils/N_matrix.mat')['data'])
 
 def get_moments(pdb):
     try:
@@ -81,7 +83,7 @@ def precompute_step(pdb):
         print("Moment cannot be calculated with error in pdb {}".format(pdb))
         #Record invalid values
         '''
-        with open('{}/invalid_pdbs/{}.pickle'.format(save_path, pdb), 'wb') as handle:
+        with open('{}/invalid_pdbs/{}.pkl'.format(save_path, pdb), 'wb') as handle:
             pickle.dump([], handle, protocol=pickle.HIGHEST_PROTOCOL)
         '''
         return
@@ -119,15 +121,15 @@ def precompute_step(pdb):
     
     #Save the LS matrix and its (even-indices) QR factorization and its first and second moment
     '''
-    with open('{}/ls_matrices/{}.pickle'.format(save_path, pdb_), 'wb') as handle:
+    with open('{}/ls_matrices/{}.pkl'.format(save_path, pdb_), 'wb') as handle:
         pickle.dump(LS_matrix, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    with open('{}/ls_matrices/{}-qr.pickle'.format(save_path, pdb_), 'wb') as handle:
+    with open('{}/ls_matrices/{}-qr.pkl'.format(save_path, pdb_), 'wb') as handle:
         q, r = np.linalg.qr(LS_matrix[:, 1:])
         pickle.dump((q, r), handle, protocol=pickle.HIGHEST_PROTOCOL)
-    with open('{}/ls_matrices/{}-even-qr.pickle'.format(save_path, pdb_), 'wb') as handle:
+    with open('{}/ls_matrices/{}-even-qr.pkl'.format(save_path, pdb_), 'wb') as handle:
         q, r = np.linalg.qr(LS_matrix[:, even_indices][:, 1:])
         pickle.dump((q, r), handle, protocol=pickle.HIGHEST_PROTOCOL)
-    with open('{}/uniform_moments/{}.pickle'.format(save_path, pdb_), 'wb') as handle:
+    with open('{}/uniform_moments/{}.pkl'.format(save_path, pdb_), 'wb') as handle:
         pickle.dump(mol, handle, protocol=pickle.HIGHEST_PROTOCOL)
     '''
 

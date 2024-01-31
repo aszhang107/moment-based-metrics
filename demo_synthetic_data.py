@@ -4,21 +4,23 @@ import multiprocessing
 import numpy as np
 import pyshtools as pysh
 import prody
-from fourier_transform_utils import get_inverse_fourier_transform
-from generate_synthetic_molecule import generate_molecule_spectrum_from_pdb_id, center_atoms
 from aspire.volume import Volume
 from aspire.utils import Rotation
 from aspire.noise.noise import WhiteNoiseAdder
 from aspire.source.simulation import Simulation
 from aspire.source.image import ArrayImageSource
 from aspire.operators import RadialCTFFilter
-from fle_2d_single import FLEBasis2D
-from fast_cryo_pca import FastPCA 
-import utils_cwf_fast_batch as utils
 import finufft
 from scipy.linalg import solve_triangular
-from utils import compute_moments, read_pdb_ids_from_csv, rot_matrix_around_axis, generate_mixture_vonMises
 from geomstats.geometry.hypersphere import Hypersphere
+import sys
+sys.path.insert(0, './utils')
+from moment_utils import compute_moments, read_pdb_ids_from_csv, rot_matrix_around_axis, generate_mixture_vonMises
+import utils_cwf_fast_batch as utils
+from fle_2d_single import FLEBasis2D
+from fast_cryo_pca import FastPCA 
+from fourier_transform_utils import get_inverse_fourier_transform
+from generate_synthetic_molecule import generate_molecule_spectrum_from_pdb_id, center_atoms
 
 pdb_file = 'pdb_id_list.txt' #file containing pdb ids
 pdb_id_list = read_pdb_ids_from_csv(pdb_file) 
@@ -51,7 +53,7 @@ for l_prime in range(0, p_cap + 1):
         if l_prime % 2 == 0:
             even_indices.append(i)
         i += 1
-        
+N_ = np.array(loadmat('utils/N_matrix.mat')['data'])
 
 #Generate viewing angle distribution
 sphere = Hypersphere(dim=2)
@@ -229,11 +231,11 @@ experimental_data_weighted = experimental_data_weighted[experimental_data_weight
 
 #If we have the even QR matrices saved, use these
 def obtain_LS_matrix_even_QR(pdb):
-    with open('{}/ls_matrices/{}-even-qr.pickle'.format(save_path, pdb), 'rb') as handle:
+    with open('{}/ls_matrices/{}-even-qr.pkl'.format(save_path, pdb), 'rb') as handle:
         return pickle.load(handle)
 #If we have the LS matrices saved, use these
 def obtain_LS_matrix(pdb):
-    with open('{}/ls_matrices/{}.pickle'.format(save_path, pdb), 'rb') as handle:
+    with open('{}/ls_matrices/{}.pkl'.format(save_path, pdb), 'rb') as handle:
         return pickle.load(handle)
 def metric_weighted(pdb):
     Q_mat, R_mat = obtain_LS_matrix_even_QR(pdb)
