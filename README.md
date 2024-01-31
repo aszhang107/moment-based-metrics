@@ -8,4 +8,4 @@ To run the code, one must first generate Clebsch-Gordan coefficients by running 
 
 Once the precompute steps are done, the demos are ready to run. Note that *demo_experimental_data* requires the particle stack downloaded from https://www.ebi.ac.uk/empiar/EMPIAR-10076/. For ease of use, one can download the images to the *EMPIAR-10076/* folder in this directory.
 
-The code in *utils/fast_cryo_pca.py*, *utils/utils_cwf_fast_batch.py*, and *fle_2d_single.py* are forked from https://github.com/yunpeng-shi/fast-cryoEM-PCA/tree/main with minor changes to include more parameters.
+The code in *utils/fast_cryo_pca.py*, *utils/utils_cwf_fast_batch.py*, and *utils/fle_2d_single.py* are forked from https://github.com/yunpeng-shi/fast-cryoEM-PCA/tree/main with minor changes to include more parameters.
