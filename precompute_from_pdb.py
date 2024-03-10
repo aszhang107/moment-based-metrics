@@ -130,7 +130,7 @@ def precompute_step(pdb):
         q, r = np.linalg.qr(LS_matrix[:, even_indices][:, 1:])
         pickle.dump((q, r), handle, protocol=pickle.HIGHEST_PROTOCOL)
     with open('{}/uniform_moments/{}.pkl'.format(save_path, pdb_), 'wb') as handle:
-        pickle.dump(mol, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump((mol.M1, mol.M2), handle, protocol=pickle.HIGHEST_PROTOCOL)
     '''
 
 B_ls_matrices = generate_B_matrices(l_cap)
